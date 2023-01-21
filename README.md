@@ -1,12 +1,12 @@
 # <b><font size=18>Visual</font></b>
 
 #### Todo List:
--[x] Add logarithm in y-axis.\
--[ ] Use mouse to draw area for plotting.\
--[ ] Add better cmaps for variables (Namely, making small magnitude invisible).\
-.\
-.\
-.\
+- [x] Add logarithm in y-axis.\
+- [ ] Use mouse to draw area for plotting.\
+- [ ] Add better cmaps for variables (Namely, making small magnitude invisible).\
+. \
+. \
+. 
 
 ---
 
