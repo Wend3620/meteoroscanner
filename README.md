@@ -12,8 +12,8 @@
 
 #### Version 0.2 (I know there is no actual versioning, will be added formally with first .py file release:
 
--Making the plot y axis in logarithm scale.
--Adding a requirement of keeping pyproj version updated. 
+- Making the plot y axis in logarithm scale. 
+- Adding a requirement of keeping pyproj version updated. 
 
 ---
 
