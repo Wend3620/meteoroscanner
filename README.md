@@ -1,4 +1,27 @@
-### <b><font size=18>Visual</font></b>
+# <b><font size=18>Visual</font></b>
+
+##Todo List:
+-[x] Add logarithm in y-axis.
+-[ ] Use mouse to draw area for plotting.
+-[ ] Add better cmaps for variables (Namely, making small magnitude invisible).
+.
+.
+.
+
+---
+
+#Version 0.2 (I know there is no actual versioning, will be added formally with first .py file release:
+
+-Making the plot y axis in logarithm scale.
+-Adding a requirement of keeping pyproj version updated. 
+
+---
+
+#Version 0.1
+
+First release
+
+---
 
 There are several files in this repo:\
 -/data: The place storing the data.\
