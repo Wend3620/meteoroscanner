@@ -10,6 +10,13 @@
 
 ---
 
+#### Version 0.0.3 (Trial release)
+
+- I am making the package to be more formal
+- First release with .py files
+
+---
+
 #### Version 0.2 (I know there is no actual versioning, will be added formally with first .py file release:
 
 - Making the plot y axis in logarithm scale. 
