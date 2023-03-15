@@ -1,12 +1,20 @@
 # <b><font size=18>Visual</font></b>
 
 #### Todo List:
-- [x] Add logarithm in y-axis.
+- [x] Make y-axis in log scale.
+- [?] Show the location of cross-section (Still not fullyu done)
 - [ ] Use mouse to draw area for plotting.
-- [ ] Add better cmaps for variables (Namely, making small magnitude invisible).\
+- [?] Add better cmaps for variables (Namely, making small magnitude invisible).\
 . \
 . \
 . 
+
+---
+
+#### Version 0.0.4 (Tracking)
+
+- Output can now show the location of each cross-section
+- Changed default omega and pv colorbar
 
 ---
 
