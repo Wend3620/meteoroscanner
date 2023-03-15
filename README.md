@@ -14,8 +14,8 @@
 #### Version 0.0.4 (Tracking)
 
 - Output can now show the location of each cross-section
-- (Specifically, the estimation file now return two objects, one is the list of coordinates for the scanner, another is the information of the plot used in estimation() and can be used in scanner by setting prec = (your input)). If "prec=" is not specified, the cross-section track will not show up. 
-- Changed default omega and pv colorbar
+- (Specifically, the estimation file now return two objects, one is the list of coordinates for the scanner, another is the information of the plot used in estimation() and can be used in scanner by setting prec = (your input). If "prec=" is not specified, the cross-section track will not show up.) 
+- Changed the default omega and pv colorbars
 
 ---
 
