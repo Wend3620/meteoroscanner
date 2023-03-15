@@ -2,9 +2,9 @@
 
 #### Todo List:
 - [x] Make y-axis in log scale.
-- [?] Show the location of cross-section (Still not fullyu done)
+- [ ] Show the location of cross-section (Not fully done)
 - [ ] Use mouse to draw area for plotting.
-- [?] Add better cmaps for variables (Namely, making small magnitude invisible).\
+- [ ] Add better cmaps for variables (Namely, making small magnitude invisible).\
 . \
 . \
 . 
@@ -34,7 +34,7 @@
 
 #### Version 0.1
 
-First release.
+- First release.
 
 ---
 
