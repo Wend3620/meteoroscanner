@@ -5,8 +5,6 @@ from metpy.units import units
 import cartopy.crs as ccrs 
 import cartopy.feature as cfeature
 import datetime
-from matplotlib import cm
-from matplotlib import cbook
 import matplotlib.colors as mplc
 from matplotlib.axes import Axes
 from cartopy.mpl.geoaxes import GeoAxes
@@ -17,35 +15,39 @@ from Coordinfo import Coordinfo
 
 #Take this for reference!
 #Move to json?
-pv_cmap = list(reversed(['#f80000', '#fa2c0c', '#fc4017', '#fe5121', '#ff5f2c', '#ff6d36', '#ff7a40', 
+
+def default():
+    pv_cmap = list(reversed(['#f80000', '#fa2c0c', '#fc4017', '#fe5121', '#ff5f2c', '#ff6d36', '#ff7a40', 
                '#ff864a', '#ff9153', '#ff9c5d', '#ffa666', '#ffb070', '#ffba79', '#ffc383', 
                '#d5b17c', '#b29e73', '#968965', '#867152', '#845336', '#9b0000']))
-w_cmap = list(reversed(['#00007f', '#2f278e', '#49469c', '#5f65aa', '#7485b8', '#8aa5c5', '#a4c6d1', '#fbfbdc', '#fbfbdc', '#ffdea4', '#ffcd88', '#ffbb6c', '#ffa952', '#ff9538', '#ff7f1f', '#ff6600']))
-pv_cmap = mplc.ListedColormap(pv_cmap)
-w_cmap = mplc.ListedColormap(w_cmap)
-pf={'contour':{
-                 'thta':{'level': np.arange(250, 450, 3),
-                         'color':'red',
-                         'linewidths':1,
-                         'title':"Potential temperature (K)"},
-                    'z':{'level': np.arange(0, 10000, 60),
-                         'color':'black',
-                         'linewidths':1, 
-                         'title': "Geopotential height (m)"},
-                    't':{'level': np.arange(0, 400, 3),
-                         'color':'black',
-                         'linewidths':1, 
-                         'title': "Temperature (K)"}},
-             'fill':{
-                   'vo':{'level': np.arange(5e-5,40e-5,5e-5),
-                         'cmap':plt.cm.YlOrRd,
-                         'title': "Relative vorticity(1/s)"},
-                    'pv':{'level': np.arange(-1e-6,9.1e-6,0.5e-6),
-                         'cmap':pv_cmap,
-                         'title': "Potential vorticity(PVU)"},
-                    'w':{'level': np.arange(-4, 4.1, 0.5),
-                         'cmap':w_cmap,
-                         'title': "Omega(Pa/s)"}}}
+    w_cmap = list(reversed(['#00007f', '#2f278e', '#49469c', '#5f65aa', '#7485b8', '#8aa5c5', '#a4c6d1', '#fbfbdc', '#fbfbdc', '#ffdea4', '#ffcd88', '#ffbb6c', '#ffa952', '#ff9538', '#ff7f1f', '#ff6600']))
+    pv_cmap = mplc.ListedColormap(pv_cmap)
+    w_cmap = mplc.ListedColormap(w_cmap)
+
+    default={'contour':{
+                    'thta':{'level': np.arange(250, 450, 3),
+                            'color':'red',
+                            'linewidths':1,
+                            'title':"Potential temperature (K)"},
+                        'z':{'level': np.arange(0, 10000, 60),
+                            'color':'black',
+                            'linewidths':1, 
+                            'title': "Geopotential height (m)"},
+                        't':{'level': np.arange(0, 400, 3),
+                            'color':'black',
+                            'linewidths':1, 
+                            'title': "Temperature (K)"}},
+                'fill':{
+                    'vo':{'level': np.arange(5e-5,40e-5,5e-5),
+                            'cmap':plt.cm.YlOrRd,
+                            'title': "Relative vorticity(1/s)"},
+                        'pv':{'level': np.arange(-1e-6,9.1e-6,0.5e-6),
+                            'cmap':pv_cmap,
+                            'title': "Potential vorticity(PVU)"},
+                        'w':{'level': np.arange(-4, 4.1, 0.5),
+                            'cmap':w_cmap,
+                            'title': "Omega(Pa/s)"}}}
+    return default
   
 
 
@@ -100,7 +102,6 @@ def baseplot(self, ax):
         title=' ' #Making initial space to the title, 
                 # IMPORTANT: everytime a new variable is read, a new string is added. 
         if self.extent != None:
-            print("hello")
             ax.set_extent(self.extent,ccrs.PlateCarree())
         #Another layer of consideration is that if the variable in crossection file is not set in the plotfile parameters, the function will not plot it.
         for key in list(dataset.keys()):
@@ -129,7 +130,6 @@ def baseplot(self, ax):
                 title+=rander['title']+', '
         return title, graph
 
-    
 def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None], plotfile='default'):
     
     r'''
@@ -146,17 +146,18 @@ def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None],
     pos3: 'list'
         A pair of lat, lon values in a list.
          This is the start point of the last cross section!!!
-    plotfile: 'dict'
+    plotfile: 'dict' or 'str: ("default" only)'
         A dictionary of plotting parameters that explained in README!
+        If input is default, the default setting dictionary will be used
         
     Returns
     -------
-    'list'
-        a list of 3 critical points for the scanner. 
+    'tuple'
+        A tuple storing the coordinate of 3 critical points for the scanner. 
     '''
     
     if plotfile == 'default':
-        plotfile = default
+        plotfile = default()
 
     #Base plot setting:
     fig, ax=plt.subplots(1,1, figsize=(15,10), subplot_kw={'projection':ccrs.PlateCarree()})
@@ -230,11 +231,11 @@ def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None],
         print("Current: (lat/lon1, lat/lon2, lat/lon3)"+str(tuple(coord)))
         return estimation(dataset=dataset, pos1=coord[:2], pos2=coord[2:4], pos3=coord[4:6], plotfile=plotfile)
 
- 
+
 def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
     r'''
     Parameters
-    ----------
+    ------
     slice_idx: 'int' or 'None'
         The index for the cross section slices. Make video when slice = None
     
@@ -253,15 +254,17 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
 
     plot: 'bool'
         Return a plot if True, return a video if False. 
+    
+    prec: 'None' or 'Coordinfo.Coordinfo object'
+        None for not printing the tracking plot, the other for showing it.
         
     Returns
     -------
-    'list'
-        a list of 3 critical points for the scanner. 
+    A video, a plot, or an matplotlib.pyplot.axes.
     '''
     
     if plotfile == 'default':
-        plotfile = default
+        plotfile = default()
 
     if type(coords) == tuple:
         #if no steps defined, the default number of step is magnitude in degrees between the start and end point.
@@ -298,7 +301,10 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     #Guideing to the option of output as video 
     elif plot==False and slice_idx==None:  
         #print(coords)
-        fig=plt.figure(figsize=(20,8)) #Generate a figure for later function #It uses the global variable fig
+        if prec == None:
+            fig=plt.figure(figsize=(12,8))
+        else: 
+            fig=plt.figure(figsize=(21,8)) #Generate a figure for later function #It uses the global variable fig
         #Making animation
         ani = animation.FuncAnimation(fig, partial(scanner, dataset=dataset, coords=coords, steps=steps, plotfile=plotfile, plot=False, prec=prec), 
                                       repeat=False, frames=len(coords[0])-1, interval=200)
@@ -309,16 +315,19 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         
     #Guideing to the option of output as one plot
     elif plot==True:
-        fig=plt.figure(figsize=(12,8))
-        
+        if prec == None:
+            fig=plt.figure(figsize=(12,8))
+        else: 
+            fig=plt.figure(figsize=(20,8))
+
     #Raise error of putting something weird.
     else:
-        raise ValueError('Set slice_idx as a number for returning plot, None and also setting plot=False for return video')
+        raise ValueError('Set slice_idx as a number for returning plot, None and also settingtrue for printing the tracking plot plot=False for return video')
     
     #Processing the data, parse and squeeze in order to let metpy to read related pyproj information.
     #This step is referenced by Metpy's corssection page: 
     dataset=dataset.metpy.parse_cf().squeeze()
-    print(coords[0][slice_idx], coords[1][slice_idx])
+    #print(coords[0][slice_idx], coords[1][slice_idx])
     cross = cross_section(dataset, 
                           coords[0][slice_idx], 
                           coords[1][slice_idx]).set_coords(('lat', 'lon'))
@@ -338,8 +347,6 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         baseplot(prec, bx)
         bx.plot([coords[1][slice_idx][1], coords[0][slice_idx][1]],
                 [coords[1][slice_idx][0], coords[0][slice_idx][0]], marker = "o", lw=3, color='k')
-        
-
         
     else:
         ax = fig.add_subplot(111)
