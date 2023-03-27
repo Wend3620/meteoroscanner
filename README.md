@@ -59,9 +59,7 @@ Initial start point (pos1 in the function), \
 initial end point(pos2 in the function), \
 and final end point(pos3 in the function).
 
-Second, run coords_generator() to the coordinates returned earlier. 
-
-Third, run scanner() to generate a video, whihc plays the cross sections from the starting line to the final line.
+Then, run scanner() to generate a video, whihc plays the cross sections from the starting line to the final line.
 
 A selection function(selection()) is also defined for extracting desired dataset.
 
