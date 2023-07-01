@@ -28,8 +28,9 @@ def default():
                     'thta':{'level': np.arange(250, 450, 3),
                             'color':'red',
                             'linewidths':1,
-                            'title':"Potential temperature (K)"},
-                        'z':{'level': np.arange(0, 10000, 60),
+                            'title':"Potential temperature (K)",
+                            'linestyle': 'dashed'},
+                        'z':{'level': np.arange(0, 15000, 60),
                             'color':'black',
                             'linewidths':1, 
                             'title': "Geopotential height (m)"},
@@ -40,7 +41,8 @@ def default():
                 'fill':{
                     'vo':{'level': np.arange(5e-5,40e-5,5e-5),
                             'cmap':plt.cm.YlOrRd,
-                            'title': "Relative vorticity(1/s)"},
+                            'title': "Relative vorticity(s^-1)",
+                            'extend': "both"},
                         'pv':{'level': np.arange(-1e-6,9.1e-6,0.5e-6),
                             'cmap':pv_cmap,
                             'title': "Potential vorticity(PVU)"},
@@ -88,6 +90,11 @@ def selection(dataset,  vrbs, extent=None, plevel=None, tidx=None):
     else:
         return dataset.isel(time=tidx)
     
+def decimal(catagory):
+    number = catagory["level"][0]
+    out = len("{:.20f}".format(float(number)).strip("0").split(".")[1])
+    return out
+    
 def baseplot(self, ax):
         x = self.x
         y = self.y
@@ -99,35 +106,57 @@ def baseplot(self, ax):
         ax.add_feature(countries, linewidth=2, edgecolor="black")
         ax.add_feature(cfeature.STATES.with_scale('50m'), linewidth=0.5)
         ax.coastlines(color='k')
+        
         title=' ' #Making initial space to the title, 
                 # IMPORTANT: everytime a new variable is read, a new string is added. 
-        if self.extent != None:
-            ax.set_extent(self.extent,ccrs.PlateCarree())
-        #Another layer of consideration is that if the variable in crossection file is not set in the plotfile parameters, the function will not plot it.
-        for key in list(dataset.keys()):
+        
+        ###Part for plotting, based on the format of plotfile, the variable in the dataset can be referenced to 
+        #either plotted by contourf or just contour. 
+        for i in list(dataset.keys()):
             #See if the parameter is in the 'contour catagory of the plotfile
-            if key.lower() in list(plotfile['contour'].keys()): #A safety measure for matching the case between the variable name in the dataset and the plot parameters.
-                rander=plotfile['contour'][key.lower()] #making all the parameters in this sub-dictionary of this plot to under one variable, so there is less length when reference later.
+            if i.lower() in list(plotfile['contour'].keys()): #A safety measure for matching the case between the variable name in the dataset and the plot parameters.
+                renders=plotfile['contour'][i.lower()] #making all the parameters in this sub-dictionary of this plot to under one variable, so there is less length when reference later.
                 #Actual plotting
-                graph=ax.contour(x, y, dataset[key],      
-                            levels=rander['level'], colors=rander['color'], linewidths=rander['linewidths'])
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contour(x, y, dataset[i]*fix,    
+                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            linestyles = lstyle, extend = etd)
                 #Adding label on the contour
-                graph.clabel(graph.levels[1::2], fontsize=8, colors=rander['color'], inline=1,
+                graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
                             inline_spacing=8, fmt='%i', rightside_up=True, use_clabeltext=True)
+                
                 #Adding the variable to the title extracted from the pre set file.
-                title+=rander['title']+'('+rander['color']+'), '
-
+                title+=min_title+'('+renders['color']+'), '
+                
             #See if the parameter is in the fill catagory of the plotfile
-            elif key.lower() in list(plotfile['fill'].keys()):
-                rander=plotfile['fill'][key.lower()]
+            elif i.lower() in list(plotfile['fill'].keys()):
+                renders=plotfile['fill'][i.lower()]
                 #Actual plotting
-                graph=ax.contourf(x, y, dataset[key],
-                            levels=rander['level'], cmap=rander['cmap'])
-                #We need to do a colorbar instead!
-                clb=plt.colorbar(graph, orientation='vertical', ax=ax, fraction=0.025, pad=0.02)
-                clb.set_label(label=rander['title'], fontsize=12) 
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contourf(x, y, dataset[i]*fix,
+                            levels=renders['level']*fix, cmap=renders['cmap'], extend=etd)
+                im_ratio = len(x)/len(y)
+                clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.03*im_ratio, pad=0.01)
+                clb.ax.locator_params(nbins=len(renders['level']))
+                clb.set_label(label=min_title, fontsize=12) 
+                
                 #Adding the variable to the title extracted from the pre set file.
-                title+=rander['title']+', '
+                title+=min_title+', '
         return title, graph
 
 def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None], plotfile='default'):
@@ -242,8 +271,8 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     dataset: 'xarray.Dataset'
         The dataset you use for final scanner.
 
-    coords_list: 'list'
-        A list of 2 arrays of coordinates seperated by the initial and end points for the scanner. 
+    coords: 'list'
+        A list of array of coordinates seperated by the initial and end points for the scanner. 
         
     steps: 'str' or 'int'
         Number of points you want to take crossection between start and end. 
@@ -260,7 +289,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         
     Returns
     -------
-    A video, a plot, or an matplotlib.pyplot.axes.
+    A video, a plot, or a matplotlib.pyplot.axes object.
     '''
     
     if plotfile == 'default':
@@ -430,4 +459,104 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
             position.append(lon)
     #Final arrange ment of position, explains why not simply adding the string for the stitle. 
     ax.set_title("From: "+position[0]+", "+position[1]+", to: "+position[2]+", "+position[3]+"", loc='Left')
+    return ax
+
+def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
+    r'''
+    Parameters
+    ------
+    slice_idx: 'int' or 'None'
+        The index for the dataset section slices. Make video when slice = None
+    
+    dataset: 'xarray.Dataset'
+        The dataset you use for final scanner.
+
+    coords: 'list'
+        A list of 2 arrays of coordinates seperated by the initial and end points for the scanner. 
+        
+    steps: 'str' or 'int'
+        Number of points you want to take datasetection between start and end. 
+
+    plotfile: 'dict' or 'str'
+        A dictionary of plotting parameters that explained in README!
+        default is "default", which will use the default dictionary mentioned in the README!
+
+    plot: 'bool'
+        Return a plot if True, return a video if False. 
+        
+    Returns
+    -------
+    A video.
+    '''
+    
+    if plotfile == 'default':
+        plotfile = default()
+
+    
+    #Clear previous plot (Especially value able when ploting for frame)
+    plt.clf()
+
+    if type(slice_idx)==int:
+        global fig #Calling the global variable fig
+
+    elif slice_idx == None: 
+        '47.0, -125.0, 25.0, -102.0'
+        length = 8*round(abs((float(coords[3]) - float(coords[1])))/abs(float(coords[0]) - float(coords[2]))*5)/5
+        fig=plt.figure(figsize=(length+2,8))
+        for h in list(dataset.coords):
+            if h.lower() in ['pressure', 'isobaricinhpa'] or  h.lower() in 'pressure':
+                temp = dataset.rename({h:"pressure"})
+                temp = temp.sel(lat = slice(max(coords[0], coords[2]), min(coords[0], coords[2])),
+                        lon = slice(min(coords[1], coords[3]), max(coords[1], coords[3])))
+            else: 
+                continue
+        #Making animation
+        ani = animation.FuncAnimation(fig, partial(scanner_p, dataset=temp, coords = coords, TtoB = TtoB, plotfile=plotfile), 
+                                        repeat=False, frames=len(temp.pressure)-1, interval=200)
+        video = ani.to_html5_video() 
+        html = display.HTML(video)
+        plt.close()
+        return  display.display(html)
+            
+    #Raise error of putting something weird.
+    else:
+        raise ValueError('Set slice_idx as a number for returning plot, None and also settingtrue for printing the tracking plot plot=False for return video')
+
+    if TtoB == True:
+        ds = dataset.sel(pressure = dataset.pressure.values[slice_idx])
+    else:
+        ds = dataset.sel(pressure = dataset.pressure.values[len(dataset.pressure)-slice_idx-1])
+    #Parameter extraction:
+    for j in list(ds.coords):
+        if j.lower() in 'latitudes':
+            y=dataset[j]
+        elif j.lower() in 'longitudes':
+            x=dataset[j]
+        else: 
+            continue
+    
+    ax = fig.add_subplot(111, projection = ccrs.PlateCarree())
+    mapinfo = Coordinfo(x = x, y = y, dataset = ds, plotfile=plotfile)
+    title, graph = baseplot(mapinfo, ax)
+
+    np.set_printoptions(suppress=True)
+    ###Part of final annotation on labels and titles.
+    #Set axis laebls by the attributes (influding name and color).
+    x_int=round(5/(abs(float(x[0])-float(x[1]))))
+    y_int=round(5/(abs(float(y[0])-float(y[1]))))
+    plt.xlabel("Longitude (Deg)", fontsize=12)
+    plt.ylabel("Latitude (Deg)", fontsize=12)
+    plt.xticks(ticks=x.values[::x_int], labels=[str(i) for i in x.values[::x_int]]) 
+    plt.yticks(ticks=y.values[::y_int], labels=[str(i) for i in y.values[::y_int]])
+
+        
+    #Adding the suptitle, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
+    plt.suptitle(title[:-2]+' ', fontsize=14)
+    #Adding the time, this is in datetime format!!!
+    ax.set_title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
+
+    #Last part is to attach the start and end location   
+    #Aviod the number to be generated in sci notation:
+    #Final arrange ment of position, explains why not simply adding the string for the stitle. 
+    ax.set_title(f"Pressure level: {int(ds.pressure)} hPa", loc='Left')
     return ax
