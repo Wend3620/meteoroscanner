@@ -15,6 +15,7 @@
 
 - New feature on scanning the atmosphere through pressure levels.
 - Now there are optional choices available for the plotfile, namely 'extend' and 'linestyle'. 
+- Optimized Visualization for cross-section
 
 ---
 

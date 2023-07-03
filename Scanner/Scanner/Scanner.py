@@ -95,7 +95,7 @@ def decimal(catagory):
     out = len("{:.20f}".format(float(number)).strip("0").split(".")[1])
     return out
     
-def baseplot(self, ax):
+def core(self, ax, colorbar = True):
         x = self.x
         y = self.y
         dataset = self.dataset
@@ -151,13 +151,58 @@ def baseplot(self, ax):
                 graph=ax.contourf(x, y, dataset[i]*fix,
                             levels=renders['level']*fix, cmap=renders['cmap'], extend=etd)
                 im_ratio = len(x)/len(y)
-                clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.03*im_ratio, pad=0.01)
-                clb.ax.locator_params(nbins=len(renders['level']))
-                clb.set_label(label=min_title, fontsize=12) 
+                if colorbar == True:
+                    clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.03*im_ratio, pad=0.01)
+                    clb.ax.locator_params(nbins=len(renders['level']))
+                    clb.set_label(label=min_title, fontsize=12) 
                 
                 #Adding the variable to the title extracted from the pre set file.
                 title+=min_title+', '
         return title, graph
+    
+def baseplot(dataset, plotfile = 'default', info = False):
+    
+    if plotfile == 'default':
+        plotfile = default()
+
+    #Parameter extraction:
+    for i in list(dataset.coords):
+        if i.lower() in 'latitudes':
+            y=dataset[i].values
+        elif i.lower() in 'longitudes':
+            x=dataset[i].values
+        elif i.lower() in ['pressure', 'isobaricinhpa'] or  i.lower() in 'pressure':
+            z=dataset[i]
+        else: 
+            continue
+
+    #Base plot setting:
+    length = 8*round(abs(float(x[-1]) - float(x[0]))/abs(float(y[-1]) - float(y[0]))*5)/5
+    fig, ax=plt.subplots(1,1, figsize=(length+2,8), subplot_kw={'projection':ccrs.PlateCarree()})
+    
+    
+    mapinfo = Coordinfo(x = x, y = y, dataset = dataset, plotfile=plotfile)
+    title, graph = core(mapinfo, ax)
+            
+    #Adding the suptitle, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
+    plt.suptitle(title[:-2]+' ', fontsize=14)
+    #Adding the time, this is in datetime format!!!
+    plt.title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
+    #Adding the level
+    plt.title(z.attrs['long_name'].capitalize()+' level: '
+              +str(int(dataset.pressure.values))+z.attrs['units'], loc='left')
+            
+    #Obtaining interval for lat/lon (5 degs):
+    x_int=round(5/(abs(x[0]-x[1])))
+    y_int=round(5/(abs(y[0]-y[1])))
+    #Set up x, y labels , ticks.
+    plt.xticks(ticks=x[::x_int], labels=[str(i) for i in x[::x_int]]) 
+    plt.yticks(ticks=y[::y_int], labels=[str(i) for i in y[::y_int]])
+    plt.xlabel("Longitude (Deg)", fontsize=12)
+    plt.ylabel("Latitude (Deg)", fontsize=12)
+    if info != False:
+        return ax, mapinfo
+    return ax
 
 def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None], plotfile='default'):
     
@@ -185,43 +230,9 @@ def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None],
         A tuple storing the coordinate of 3 critical points for the scanner. 
     '''
     
-    if plotfile == 'default':
-        plotfile = default()
+    ax, mapinfo= baseplot(dataset, plotfile=plotfile, info=True)
+    
 
-    #Base plot setting:
-    fig, ax=plt.subplots(1,1, figsize=(15,10), subplot_kw={'projection':ccrs.PlateCarree()})
-    
-    #Parameter extraction:
-    for i in list(dataset.coords):
-        if i.lower() in 'latitudes':
-            y=dataset[i].values
-        elif i.lower() in 'longitudes':
-            x=dataset[i].values
-        elif i.lower() in ['pressure', 'isobaricinhpa'] or  i.lower() in 'pressure':
-            z=dataset[i]
-        else: 
-            continue
-    
-    mapinfo = Coordinfo(x = x, y = y, dataset = dataset, plotfile=plotfile)
-    title, graph = baseplot(mapinfo, ax)
-            
-    #Adding the suptitle, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
-    plt.suptitle(title[:-2]+' ', fontsize=14, y=0.85)
-    #Adding the time, this is in datetime format!!!
-    plt.title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
-    #Adding the level
-    plt.title(z.attrs['long_name'].capitalize()+' level: '
-              +str(int(dataset.pressure.values))+z.attrs['units'], loc='left')
-            
-    #Obtaining interval for lat/lon (5 degs):
-    x_int=round(5/(abs(x[0]-x[1])))
-    y_int=round(5/(abs(y[0]-y[1])))
-    #Set up x, y labels , ticks.
-    plt.xticks(ticks=x[::x_int], labels=[str(i) for i in x[::x_int]]) 
-    plt.yticks(ticks=y[::y_int], labels=[str(i) for i in y[::y_int]])
-    plt.xlabel("Longitude (Deg)", fontsize=12)
-    plt.ylabel("Latitude (Deg)", fontsize=12)
-    
     #Marking the wanted location for crossection
     #Your initial point (pos1) in red, 
     #Your initial crossection end (pos2) in yellow, 
@@ -233,6 +244,7 @@ def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None],
     if type(pos3[0])in [int, float]  and type(pos3[1])in [int, float] :
         ax.scatter(marker='.', x=pos3[1], y=pos3[0], transform=ccrs.PlateCarree(), s=500, c='Teal', edgecolors ='w', zorder=5)
         
+    
     plt.show()
     
     #Confirmation
@@ -300,12 +312,12 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         if steps=='default':
             steps=np.round(((coords[0]-coords[4])**2+(coords[1]-coords[5])**2)**0.5)
         #Calculate min and max for extent
-        #minlat = min([coords[0], coords[2], coords[4]]) - 3
-        #maxlat = max([coords[0], coords[2], coords[4]]) + 3
-        #minlon = min([coords[1], coords[3], coords[5]]) - 3
-        #maxlon = max([coords[1], coords[3], coords[5]]) + 3
-        #if prec != None:
-        #    prec.fix_extent([minlon, maxlon, minlat, maxlat])
+        minlat = min([coords[0], coords[2], coords[4]]) - 2
+        maxlat = max([coords[0], coords[2], coords[4]]) + 2
+        minlon = min([coords[1], coords[3], coords[5]]) - 2
+        maxlon = max([coords[1], coords[3], coords[5]]) + 2
+        if prec != None:
+            prec.fix_extent([minlon, maxlon, minlat, maxlat])
         #Calculate the difference between initial crossection start/end points lat&lon difference.
         difference=[coords[0]-coords[2], coords[1]-coords[3]]
         #Obtaining the crs inforamtion for geodesic() to calculate the intermidiate points
@@ -330,10 +342,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     #Guideing to the option of output as video 
     elif plot==False and slice_idx==None:  
         #print(coords)
-        if prec == None:
-            fig=plt.figure(figsize=(12,8))
-        else: 
-            fig=plt.figure(figsize=(21,8)) #Generate a figure for later function #It uses the global variable fig
+        fig=plt.figure(figsize=(12,8))
         #Making animation
         ani = animation.FuncAnimation(fig, partial(scanner, dataset=dataset, coords=coords, steps=steps, plotfile=plotfile, plot=False, prec=prec), 
                                       repeat=False, frames=len(coords[0])-1, interval=200)
@@ -344,10 +353,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         
     #Guideing to the option of output as one plot
     elif plot==True:
-        if prec == None:
-            fig=plt.figure(figsize=(12,8))
-        else: 
-            fig=plt.figure(figsize=(20,8))
+        fig=plt.figure(figsize=(12,8))
 
     #Raise error of putting something weird.
     else:
@@ -371,12 +377,16 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     
     #Adding Subplot:
     if prec!=None:
-        ax = fig.add_subplot(121)
-        bx = fig.add_subplot(122, projection=ccrs.PlateCarree())
-        baseplot(prec, bx)
+        ax = fig.add_subplot(111)
+        bx = fig.add_axes([0.57, 0.12, 0.27, 0.27], projection=ccrs.PlateCarree())
+        title, graph = core(prec, bx, colorbar=False)
         bx.plot([coords[1][slice_idx][1], coords[0][slice_idx][1]],
-                [coords[1][slice_idx][0], coords[0][slice_idx][0]], marker = "o", lw=3, color='k')
-        
+                [coords[1][slice_idx][0], coords[0][slice_idx][0]], lw=2, color='k')
+        print(f"{coords[1][slice_idx][1]}, {coords[0][slice_idx][1]}, {coords[1][slice_idx][0]}, {coords[0][slice_idx][0]}")
+        bx.annotate("A", (coords[0][slice_idx][1], coords[0][slice_idx][0]), 
+                    color='k', weight = 'bold', fontsize =14)
+        bx.annotate("B", (coords[1][slice_idx][1], coords[1][slice_idx][0]), 
+                    color='k', weight = 'bold', fontsize = 14)
     else:
         ax = fig.add_subplot(111)
     
@@ -386,37 +396,55 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     ###Part for plotting, based on the format of plotfile, the variable in the crossection can be referenced to 
     #either plotted by contourf or just contour. 
     for i in list(cross.keys()):
-        #See if the parameter is in the 'contour catagory of the plotfile
-        if i.lower() in list(plotfile['contour'].keys()): #A safety measure for matching the case between the variable name in the dataset and the plot parameters.
-            rander=plotfile['contour'][i.lower()] #making all the parameters in this sub-dictionary of this plot to under one variable, so there is less length when reference later.
-            #Actual plotting
-            graph=ax.contour(x, y, cross[i],      
-                           levels=rander['level'], colors=rander['color'], linewidths=rander['linewidths'])
-            #Adding label on the contour
-            graph.clabel(graph.levels[1::2], fontsize=8, colors=rander['color'], inline=1,
-                         inline_spacing=8, fmt='%i', rightside_up=True, use_clabeltext=True)
-            
-            #Adding the variable to the title extracted from the pre set file.
-            title+=rander['title']+'('+rander['color']+'), '
-            
-        #See if the parameter is in the fill catagory of the plotfile
-        elif i.lower() in list(plotfile['fill'].keys()):
-            rander=plotfile['fill'][i.lower()]
-            #Actual plotting
-            graph=ax.contourf(x, y, cross[i],
-                           levels=rander['level'], cmap=rander['cmap'], extend="both")
-            im_ratio = len(x)/len(y)
-            clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.01*im_ratio, pad=0.02)
-            clb.ax.locator_params(nbins=len(rander['level']))
-            clb.set_label(label=rander['title'], fontsize=12) 
-            
-            #Adding the variable to the title extracted from the pre set file.
-            title+=rander['title']+', '
+            #See if the parameter is in the 'contour catagory of the plotfile
+            if i.lower() in list(plotfile['contour'].keys()): #A safety measure for matching the case between the variable name in the dataset and the plot parameters.
+                renders=plotfile['contour'][i.lower()] #making all the parameters in this sub-dictionary of this plot to under one variable, so there is less length when reference later.
+                #Actual plotting
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contour(x, y, cross[i]*fix,    
+                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            linestyles = lstyle, extend = etd)
+                #Adding label on the contour
+                graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
+                            inline_spacing=8, fmt='%i', rightside_up=True, use_clabeltext=True)
+                
+                #Adding the variable to the title extracted from the pre set file.
+                title+=min_title+'('+renders['color']+'), '
+                
+            #See if the parameter is in the fill catagory of the plotfile
+            elif i.lower() in list(plotfile['fill'].keys()):
+                renders=plotfile['fill'][i.lower()]
+                #Actual plotting
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contourf(x, y, cross[i]*fix,
+                            levels=renders['level']*fix, cmap=renders['cmap'], extend=etd)
+                im_ratio = len(x)/len(y)
+                clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.03*im_ratio, pad=0.01)
+                clb.ax.locator_params(nbins=len(renders['level']))
+                clb.set_label(label=min_title, fontsize=12) 
+                
+                #Adding the variable to the title extracted from the pre set file.
+                title+=min_title+', '
     
     ###Part of final annotation on labels and titles.
     
     #Annotating the start and end point 
-    ax.text(-0.02, -0.04, 'A', fontsize=14, transform=ax.transAxes, weight='bold')
+    ax.text(0, -0.04, 'A', fontsize=14, transform=ax.transAxes, weight='bold')
     ax.text(0.98, -0.04, 'B', fontsize=14, transform=ax.transAxes, weight='bold')  
     #If y axis is pressure, reverse the whole y axis:
     if list(cross.dims.keys())[0].lower()=='pressure':
@@ -537,7 +565,7 @@ def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
     
     ax = fig.add_subplot(111, projection = ccrs.PlateCarree())
     mapinfo = Coordinfo(x = x, y = y, dataset = ds, plotfile=plotfile)
-    title, graph = baseplot(mapinfo, ax)
+    title, graph = core(mapinfo, ax)
 
     np.set_printoptions(suppress=True)
     ###Part of final annotation on labels and titles.
