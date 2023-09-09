@@ -1,17 +1,13 @@
 import xarray as xr, matplotlib.pyplot as plt, numpy as np, metpy as mp, matplotlib.animation as animation
-import metpy.calc as mpcalc
 from metpy.interpolate import cross_section, geodesic
 from metpy.units import units
 import cartopy.crs as ccrs 
 import cartopy.feature as cfeature
-import datetime
 import matplotlib.colors as mplc
-from matplotlib.axes import Axes
-from cartopy.mpl.geoaxes import GeoAxes
-from PIL import Image
 from IPython import display
 from functools import partial
 from Coordinfo import Coordinfo
+from scipy.interpolate import interp1d
 
 #Take this for reference!
 #Move to json?
