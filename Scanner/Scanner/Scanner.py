@@ -42,7 +42,7 @@ def default():
                     'vo':{'level': np.arange(5e-5,40e-5,5e-5),
                             'cmap':plt.cm.YlOrRd,
                             'title': "Relative vorticity(s^-1)",
-                            'extend': "both"},
+                            'extend': "max"},
                         'pv':{'level': np.arange(-1e-6,9.1e-6,0.5e-6),
                             'cmap':pv_cmap,
                             'title': "Potential vorticity(PVU)"},
@@ -204,7 +204,108 @@ def baseplot(dataset, plotfile = 'default', info = False):
         return ax, mapinfo
     return ax
 
-def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None], plotfile='default'):
+def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='default'):
+    
+    r'''
+    Parameters
+    ----------
+    dataset: 'xarray.Dataset' 
+        The dataset imported before.
+    locations: 'list'
+        Pairs of lat, lon values in a list.
+        This is the initial point!!!
+    width: 
+        Width of the cross section, default is 5 degrees.
+    slices:
+        Number of cross sections you want to take between the start and the end.
+    plotfile: 'dict' or 'str: ("default" only)'
+        A dictionary of plotting parameters that explained in README!
+        If input is default, the default setting dictionary will be used
+        
+    Returns
+    -------
+    'tuple'
+        A tuple storing the coordinate of 3 critical points for the scanner. 
+    '''
+    
+    ax, mapinfo= baseplot(dataset, plotfile=plotfile, info=True)
+
+    if locations != []:
+
+        #Marking the wanted location for crossection
+        lats = []
+        lons = []
+        for i in range(len(locations)//2):
+            if type(locations[2*i])in [int, float]  and type(locations[2*i+1])in [int, float] :
+                ax.scatter(marker='.', x=locations[2*i+1], y=locations[2*i], transform=ccrs.PlateCarree(), s=500, c='Teal', edgecolors ='w', zorder=5)
+                lats.append(locations[2*i])
+                lons.append(locations[2*i+1])
+        
+        lons = np.array(lons)
+        lats = np.array(lats)
+        if len(lats) == 2:
+            X_Y_Spline = interp1d(lats, lons, kind='linear')
+            X_ = np.linspace(lons.min(), lons.max(), slices)
+            Y_ = X_Y_Spline(X_)
+
+        else:
+            if (lons[0] != min(lons) and lons[0] != max(lons)) or (lons[-1] != min(lons) and lons[-1] != max(lons)):
+                X_Y_Spline = interp1d(lats, lons, kind='quadratic')
+                X_ = np.linspace(lats.min(), lats.max(), slices)
+                Y_ = X_Y_Spline(X_)
+                dum = X_
+                X_ = Y_
+                Y_ = dum
+
+            else:
+                X_Y_Spline = interp1d(lons, lats, kind='quadratic')
+                X_ = np.linspace(lons.min(), lons.max(), slices)
+                Y_ = X_Y_Spline(X_)
+
+        Xout = []
+        Yout = []
+        for i in range(len(X_) - 2):
+            dx = X_[i+2] - X_[i]
+            dy = Y_[i+2] - Y_[i]
+            ang = np.arctan2(dy, dx)
+            Xout.append([X_[i+1] - width*np.sin(ang), X_[i+1] + width*np.sin(ang)]) #sin(90deg - x) = cos(x)
+            Yout.append([Y_[i+1] + width*np.cos(ang), Y_[i+1] - width*np.cos(ang)])
+            ax.plot(Xout[i], Yout[i], lw = 1, color ='k', transform=ccrs.PlateCarree())
+
+        plt.plot(X_, Y_, transform=ccrs.PlateCarree())
+        
+    plt.show()
+    
+    #Confirmation
+    confirm=input("No change/Exit? [y/n]: ")
+    
+    if confirm.lower()=='y': #You can also put a capital Y! 
+        if locations == []:
+            return None
+        else:
+            start = []
+            end = []
+            for k in range(len(Xout)): #Formatting the output for future function
+                start.append([Yout[k][0], Xout[k][0]])
+                end.append([Yout[k][1], Xout[k][1]])
+            #plt.clf() 
+            print("Output: (lat/lon1, lat/lon2)"+f'({locations[0]}/{locations[1]}, {locations[-2]}/{locations[-1]})') #Print out for reference if forget to assign variable
+            return [start, end], mapinfo
+        
+    else: #Ask for new coordinate info for draw the map again.
+        fix=input('Type change:').split(',')
+        plt.clf() 
+        #Typing the distance should be in a following format: 
+        #[Start point lat,lon pair, Initial crossection end point lat, lon pair, track end point lat, lon pair]
+        locations = []
+        for value in fix:
+            locations.append(float(value))
+
+        #Deviding the typed location into paird for function to recognize 
+        print("Current: (lat/lon1, lat/lon2)"+f'({locations[0]}/{locations[1]}, {locations[-2]}/{locations[-1]})')
+        return estimation(dataset=dataset, locations = locations, plotfile=plotfile)
+
+def estimation_3pts(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None], plotfile='default'):
     
     r'''
     Parameters
@@ -272,8 +373,213 @@ def estimation(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, None],
         print("Current: (lat/lon1, lat/lon2, lat/lon3)"+str(tuple(coord)))
         return estimation(dataset=dataset, pos1=coord[:2], pos2=coord[2:4], pos3=coord[4:6], plotfile=plotfile)
 
-
 def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
+    r'''
+    Parameters
+    ------
+    slice_idx: 'int' or 'None'
+        The index for the cross section slices. Make video when slice = None
+    
+    dataset: 'xarray.Dataset'
+        The dataset you use for final scanner.
+
+    coords: 'list'
+        A list of array of coordinates used for cross-sections. 
+        
+    steps: 'str' or 'int'
+        Number of points you want to take crossection between start and end. 
+
+    plotfile: 'dict' or 'str'
+        A dictionary of plotting parameters that explained in README!
+        default is "default", which will use the default dictionary mentioned in the README!
+
+    plot: 'bool'
+        Return a plot if True, return a video if False. 
+    
+    prec: 'None' or 'Coordinfo.Coordinfo object'
+        None for not printing the tracking plot, the other for showing it.
+        
+    Returns
+    -------
+    A video, a plot, or a matplotlib.pyplot.axes object.
+    '''
+    
+    if plotfile == 'default':
+        plotfile = default()
+
+    if prec != None:
+        lats = []
+        lons = []
+        for k in range(len(coords[0])):
+            lats.append(coords[0][k][0])
+            lats.append(coords[1][k][0])
+            lons.append(coords[0][k][1])
+            lons.append(coords[1][k][1])
+
+        minlat = min(lats) - 2
+        maxlat = max(lats) + 2
+        minlon = min(lons) - 2
+        maxlon = max(lons) + 2
+        prec.fix_extent([minlon, maxlon, minlat, maxlat])
+
+    #Clear previous plot (Especially value able when ploting for frame)
+    plt.clf()
+    
+    #Guideing to the option of output as frame in video
+    if plot==False and type(slice_idx)==int:
+        global fig #Calling the global variable fig
+
+    #Guideing to the option of output as video 
+    elif plot==False and slice_idx==None:  
+        #print(coords)
+        fig=plt.figure(figsize=(12,8))
+        #Making animation
+        ani = animation.FuncAnimation(fig, partial(scanner, dataset=dataset, coords=coords, steps=steps, plotfile=plotfile, plot=False, prec=prec), 
+                                      repeat=False, frames=len(coords[0])-1, interval=200)
+        video = ani.to_html5_video() 
+        html = display.HTML(video)
+        plt.close()
+        return  display.display(html)
+        
+    #Guideing to the option of output as one plot
+    elif plot==True:
+        fig=plt.figure(figsize=(12,8))
+
+    #Raise error of putting something weird.
+    else:
+        raise ValueError('Set slice_idx as a number for returning plot, None and also settingtrue for printing the tracking plot plot=False for return video')
+    
+    #Processing the data, parse and squeeze in order to let metpy to read related pyproj information.
+    #This step is referenced by Metpy's corssection page: 
+    dataset=dataset.metpy.parse_cf().squeeze()
+    #print(coords[0][slice_idx], coords[1][slice_idx])
+    cross = cross_section(dataset, 
+                          coords[0][slice_idx], 
+                          coords[1][slice_idx]).set_coords(('lat', 'lon'))
+    cross = cross.metpy.quantify()
+    
+    #Extractig the dimension in crossection
+    
+    #I think the new dimension, which is called as 'index' for indexing lat and lon value, is always behind the existing dimension, 
+    #so I can utlize this feature to do an arbitrary indexing.
+    x=cross[list(cross.dims.keys())[1]]
+    y=cross[list(cross.dims.keys())[0]]
+    
+    #Adding Subplot:
+    if prec!=None:
+        ax = fig.add_subplot(111)
+        bx = fig.add_axes([0.076, 0.68, 0.27, 0.2], projection=ccrs.PlateCarree())
+        title, graph = core(prec, bx, colorbar=False)
+        bx.plot([coords[1][slice_idx][1], coords[0][slice_idx][1]],
+                [coords[1][slice_idx][0], coords[0][slice_idx][0]], lw=2, color='k')
+        print(f"Currently slicing: ({coords[0][slice_idx][0]}, {coords[0][slice_idx][1]}), ({coords[1][slice_idx][0]}, {coords[1][slice_idx][1]})")
+        bx.annotate("A", (coords[0][slice_idx][1], coords[0][slice_idx][0]), 
+                    color='k', weight = 'bold', fontsize =14)
+        bx.annotate("B", (coords[1][slice_idx][1], coords[1][slice_idx][0]), 
+                    color='k', weight = 'bold', fontsize = 14)
+    else:
+        ax = fig.add_subplot(111)
+    
+    title=' ' #Making initial space to the title, 
+              # IMPORTANT: everytime a new variable is read, a new string is added. 
+    
+    ###Part for plotting, based on the format of plotfile, the variable in the crossection can be referenced to 
+    #either plotted by contourf or just contour. 
+    for i in list(cross.keys()):
+            #See if the parameter is in the 'contour catagory of the plotfile
+            if i.lower() in list(plotfile['contour'].keys()): #A safety measure for matching the case between the variable name in the dataset and the plot parameters.
+                renders=plotfile['contour'][i.lower()] #making all the parameters in this sub-dictionary of this plot to under one variable, so there is less length when reference later.
+                #Actual plotting
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contour(x, y, cross[i]*fix,    
+                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            linestyles = lstyle, extend = etd)
+                #Adding label on the contour
+                graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
+                            inline_spacing=8, fmt='%i', rightside_up=True, use_clabeltext=True)
+                
+                #Adding the variable to the title extracted from the pre set file.
+                title+=min_title+'('+renders['color']+'), '
+                
+            #See if the parameter is in the fill catagory of the plotfile
+            elif i.lower() in list(plotfile['fill'].keys()):
+                renders=plotfile['fill'][i.lower()]
+                #Actual plotting
+                fix = 1
+                min_title = renders['title']
+                if decimal(renders) > 2:
+                    fix = 10**decimal(renders)
+                    loc = renders["title"].find("(")
+                    min_title = renders["title"][:loc+1] + f"10e-{decimal(renders)}" + renders["title"][loc+1:]
+                #Optional!
+                etd = renders['extend'] if 'extend' in renders else 'neither'
+                graph=ax.contourf(x, y, cross[i]*fix,
+                            levels=renders['level']*fix, cmap=renders['cmap'], extend=etd)
+                im_ratio = len(x)/len(y)
+                clb=plt.colorbar(graph, orientation='vertical', ax=ax,fraction=0.03*im_ratio, pad=0.01)
+                clb.ax.locator_params(nbins=len(renders['level']))
+                clb.set_label(label=min_title, fontsize=12) 
+                
+                #Adding the variable to the title extracted from the pre set file.
+                title+=min_title+', '
+    
+    ###Part of final annotation on labels and titles.
+    
+    #Annotating the start and end point 
+    ax.text(0, -0.04, 'A', fontsize=14, transform=ax.transAxes, weight='bold')
+    ax.text(0.98, -0.04, 'B', fontsize=14, transform=ax.transAxes, weight='bold')  
+    #If y axis is pressure, reverse the whole y axis:
+    if list(cross.dims.keys())[0].lower()=='pressure':
+        ax.set_ylim(y[0], y[-1])
+        ax.set_yscale('symlog')
+        ax.set_yticks(np.arange(1000, 50, -100))
+        ax.set_yticklabels(np.arange(1000, 50, -100))
+    #Set y axis laebls by the attributes (influding name and color).
+    ax.set_ylabel(y.attrs['long_name'].capitalize()+" ("+y.attrs['units']+") ", fontsize=12)
+    ax.set_xticks([]) 
+
+        
+    #Adding the sup title, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
+    plt.suptitle(title[:-2]+' ', fontsize=14)
+    #Adding the time, this is in datetime format!!!
+    ax.set_title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
+
+    #Last part is to attach the start and end location   
+    #Aviod the number to be generated in sci notation:
+    np.set_printoptions(suppress=True)
+    #Merge the start and the end together
+    #the resulted list looks like this: [lat1, lon1, lat2, lon2]
+    ori_des=np.concatenate((np.around(coords[0][slice_idx], decimals=2), np.around(coords[1][slice_idx], decimals=2)))
+    #Prepare for the final position string list for appending when all the rounded coordinates is properly convereted.
+    position=[]
+    
+    #Doing so by the ERA5 format's lat/lon representation (North is positive for lat , east is positive for lon)
+    for i in range(4): #I know that the coordinate can only made by 2 lat&lon pairs or 4 numbers!!!
+        if i%2==0: #odd/even difference to discern wheather a lat or a lon
+            if ori_des[i]>=0: 
+                lat=str(ori_des[i])+" N"
+            else: 
+                lat=str(ori_des[i])+" S"
+            position.append(lat) #Appending the string, not doing + is because the arrangement later.
+        else: 
+            if ori_des[i]>=0:
+                lon=str(ori_des[i])+" E"
+            else:
+                lon=str(ori_des[i])+" W"
+            position.append(lon)
+    #Final arrange ment of position, explains why not simply adding the string for the stitle. 
+    ax.set_title("From: "+position[0]+", "+position[1]+", to: "+position[2]+", "+position[3]+"", loc='Left')
+    return ax
+
+def scanner_old(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
     r'''
     Parameters
     ------
@@ -502,8 +808,8 @@ def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
     coords: 'list'
         A list of 2 arrays of coordinates seperated by the initial and end points for the scanner. 
         
-    steps: 'str' or 'int'
-        Number of points you want to take datasetection between start and end. 
+    TtoB: 'Bool'
+        A boolean input for determining the orientiation of scanning.
 
     plotfile: 'dict' or 'str'
         A dictionary of plotting parameters that explained in README!

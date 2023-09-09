@@ -2,12 +2,18 @@
 
 #### Todo List:
 - [x] Make y-axis in log scale.
-- [ ] Show the location of cross-section (Not fully done)
+- [x] Show the location of cross-section
+- [x] Able to scan along a front
 - [ ] Use mouse to draw area for plotting.
 - [ ] Add better cmaps for variables (Namely, making small magnitude invisible)(Not fully done).\
 . \
-. \
 . 
+
+---
+
+#### Version 0.0.8 (curve)
+
+- New method introduced to draw curves (Meaning we can scan along a front now). 
 
 ---
 
@@ -36,7 +42,7 @@
 
 #### Version 0.2 (I know there is no actual versioning, will be added formally with first .py file release:
 
-- Making the plot y axis in logarithm scale. 
+- Making the plot's vertical axis in logarithm scale. 
 - Adding a requirement of keeping pyproj version updated. 
 
 ---
