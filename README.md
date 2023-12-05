@@ -4,10 +4,18 @@
 - [x] Make y-axis in log scale.
 - [x] Show the location of cross-section
 - [x] Able to scan along a front
+- [x] Add better cmaps for variables (Namely, making small magnitude invisible.
 - [ ] Use mouse to draw area for plotting.
-- [ ] Add better cmaps for variables (Namely, making small magnitude invisible)(Not fully done).\
+
 . \
 . 
+
+---
+
+#### Version 0.0.9 (Timelapse)
+
+- New method for plotting timelapse on an isosurface. 
+- All planned features are now implemented, except the interaction with the mouse cursor.
 
 ---
 

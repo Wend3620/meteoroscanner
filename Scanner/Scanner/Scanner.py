@@ -1,6 +1,5 @@
 import xarray as xr, matplotlib.pyplot as plt, numpy as np, metpy as mp, matplotlib.animation as animation
 from metpy.interpolate import cross_section, geodesic
-from metpy.units import units
 import cartopy.crs as ccrs 
 import cartopy.feature as cfeature
 import matplotlib.colors as mplc
@@ -26,7 +25,7 @@ def default():
                             'linewidths':1,
                             'title':"Potential temperature (K)",
                             'linestyle': 'dashed'},
-                        'z':{'level': np.arange(0, 15000, 60),
+                        'z':{'level': np.arange(0, 150000, 60),
                             'color':'black',
                             'linewidths':1, 
                             'title': "Geopotential height (m)"},
@@ -44,6 +43,7 @@ def default():
                             'title': "Potential vorticity(PVU)"},
                         'w':{'level': np.arange(-4, 4.1, 0.5),
                             'cmap':w_cmap,
+                            'extend': 'both',
                             'title': "Omega(Pa/s)"}}}
     return default
   
@@ -154,9 +154,9 @@ def core(self, ax, colorbar = True):
                 
                 #Adding the variable to the title extracted from the pre set file.
                 title+=min_title+', '
-        return title, graph
+        return title, ax
     
-def baseplot(dataset, plotfile = 'default', info = False):
+def baseplot(dataset,plotfile = 'default', info = False, fig = None):
     
     if plotfile == 'default':
         plotfile = default()
@@ -173,19 +173,23 @@ def baseplot(dataset, plotfile = 'default', info = False):
             continue
 
     #Base plot setting:
-    length = 8*round(abs(float(x[-1]) - float(x[0]))/abs(float(y[-1]) - float(y[0]))*5)/5
-    fig, ax=plt.subplots(1,1, figsize=(length+2,8), subplot_kw={'projection':ccrs.PlateCarree()})
-    
+    if fig == None:
+        length = 8*round(abs(float(x[-1]) - float(x[0]))/abs(float(y[-1]) - float(y[0]))*5)/5
+        fig, ax=plt.subplots(1,1, figsize=(length+2,8), subplot_kw={'projection':ccrs.PlateCarree()})
+    else:
+        plt.clf()
+        ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
     
     mapinfo = Coordinfo(x = x, y = y, dataset = dataset, plotfile=plotfile)
+    graph = None
     title, graph = core(mapinfo, ax)
             
     #Adding the suptitle, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
     plt.suptitle(title[:-2]+' ', fontsize=14)
     #Adding the time, this is in datetime format!!!
-    plt.title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
+    graph.set_title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
     #Adding the level
-    plt.title(z.attrs['long_name'].capitalize()+' level: '
+    graph.set_title(z.attrs['long_name'].capitalize()+' level: '
               +str(int(dataset.pressure.values))+z.attrs['units'], loc='left')
             
     #Obtaining interval for lat/lon (5 degs):
@@ -197,8 +201,8 @@ def baseplot(dataset, plotfile = 'default', info = False):
     plt.xlabel("Longitude (Deg)", fontsize=12)
     plt.ylabel("Latitude (Deg)", fontsize=12)
     if info != False:
-        return ax, mapinfo
-    return ax
+        return graph, mapinfo
+    return graph
 
 def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='default'):
     
@@ -225,7 +229,6 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
     '''
     
     ax, mapinfo= baseplot(dataset, plotfile=plotfile, info=True)
-
     if locations != []:
 
         #Marking the wanted location for crossection
@@ -466,13 +469,21 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
         ax = fig.add_subplot(111)
         bx = fig.add_axes([0.076, 0.68, 0.27, 0.2], projection=ccrs.PlateCarree())
         title, graph = core(prec, bx, colorbar=False)
-        bx.plot([coords[1][slice_idx][1], coords[0][slice_idx][1]],
-                [coords[1][slice_idx][0], coords[0][slice_idx][0]], lw=2, color='k')
-        print(f"Currently slicing: ({coords[0][slice_idx][0]}, {coords[0][slice_idx][1]}), ({coords[1][slice_idx][0]}, {coords[1][slice_idx][1]})")
-        bx.annotate("A", (coords[0][slice_idx][1], coords[0][slice_idx][0]), 
-                    color='k', weight = 'bold', fontsize =14)
-        bx.annotate("B", (coords[1][slice_idx][1], coords[1][slice_idx][0]), 
+        lonA = coords[0][slice_idx][1]
+        latA = coords[0][slice_idx][0]
+        lonB = coords[1][slice_idx][1]
+        latB = coords[1][slice_idx][0]
+        sign_Y = (latA - latB)/abs(latA - latB)
+        sign_X = (lonA - lonB)/abs(lonA - lonB)
+        slope = np.arctan(abs((latA - latB)/(lonA - lonB)))
+        bx.plot([lonB, lonA],  [latB, latA], lw=2, color='k')
+        
+        print(f"Currently slicing: ({latA}, {lonA}), ({latB}, {lonB})")
+        bx.annotate("A", (lonA -0.75 + 1*np.cos(slope)*sign_X, latA -0.75+ 1*np.sin(slope)*sign_Y),  #X, Y
+                    color='k', weight = 'bold', fontsize = 14) 
+        bx.annotate("B", (lonB -0.75 - 1*np.cos(slope)*sign_X, latB -0.75- 1*np.sin(slope)*sign_Y), 
                     color='k', weight = 'bold', fontsize = 14)
+        
     else:
         ax = fig.add_subplot(111)
     
@@ -575,7 +586,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
     ax.set_title("From: "+position[0]+", "+position[1]+", to: "+position[2]+", "+position[3]+"", loc='Left')
     return ax
 
-def scanner_old(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
+def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
     r'''
     Parameters
     ------
@@ -680,14 +691,20 @@ def scanner_old(slice_idx, dataset, coords, steps='default', plotfile="default",
     #Adding Subplot:
     if prec!=None:
         ax = fig.add_subplot(111)
-        bx = fig.add_axes([0.57, 0.12, 0.27, 0.27], projection=ccrs.PlateCarree())
+        bx = fig.add_axes([0.076, 0.68, 0.27, 0.2], projection=ccrs.PlateCarree())
         title, graph = core(prec, bx, colorbar=False)
-        bx.plot([coords[1][slice_idx][1], coords[0][slice_idx][1]],
-                [coords[1][slice_idx][0], coords[0][slice_idx][0]], lw=2, color='k')
-        print(f"{coords[1][slice_idx][1]}, {coords[0][slice_idx][1]}, {coords[1][slice_idx][0]}, {coords[0][slice_idx][0]}")
-        bx.annotate("A", (coords[0][slice_idx][1], coords[0][slice_idx][0]), 
-                    color='k', weight = 'bold', fontsize =14)
-        bx.annotate("B", (coords[1][slice_idx][1], coords[1][slice_idx][0]), 
+        lonA = coords[0][slice_idx][1]
+        latA = coords[0][slice_idx][0]
+        lonB = coords[1][slice_idx][1]
+        latB = coords[1][slice_idx][0]
+        sign_Y = (latA - latB)/abs(latA - latB)
+        sign_X = (lonA - lonB)/abs(lonA - lonB)
+        slope = np.arctan(abs((latA - latB)/(lonA - lonB)))
+        bx.plot([lonB, lonA],  [latB, latA], lw=2, color='k')
+        print(f"Currently slicing: ({latA}, {lonA}), ({latB}, {lonB})")
+        bx.annotate("A", (lonA -0.75 + 1*np.cos(slope)*sign_X, latA -0.25+ 1.5*np.sin(slope)*sign_Y),  #X, Y
+                    color='k', weight = 'bold', fontsize = 14) 
+        bx.annotate("B", (lonB -0.75 - 1*np.cos(slope)*sign_X, latB  -0.25- 1.5*np.sin(slope)*sign_Y), 
                     color='k', weight = 'bold', fontsize = 14)
     else:
         ax = fig.add_subplot(111)
@@ -791,7 +808,7 @@ def scanner_old(slice_idx, dataset, coords, steps='default', plotfile="default",
     ax.set_title("From: "+position[0]+", "+position[1]+", to: "+position[2]+", "+position[3]+"", loc='Left')
     return ax
 
-def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
+def scanner_p(slice_idx, dataset, coords = "all", TtoB = True, plotfile="default"):
     r'''
     Parameters
     ------
@@ -822,24 +839,44 @@ def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
     if plotfile == 'default':
         plotfile = default()
 
-    
     #Clear previous plot (Especially value able when ploting for frame)
     plt.clf()
+
+    pres = False
+    for i in list(dataset.coords):
+        if i.lower() in 'latitudes':
+            y = dataset[i]
+        elif i.lower() in 'longitudes':
+            x = dataset[i]
+        elif i.lower() in 'pressure':
+            if i!= 'pressure':
+                dataset = dataset.rename({i: 'pressure'})
+            pres = True
+        else: 
+            continue
+
+    if pres == False:
+        raise ValueError('Please set the vertical coordinate name as "pressure" to continue')
+    
+    if coords == "all":
+        coords = [float(y.max().values), float(x.min().values), float(y.min().values), float(x.max().values)]
+    
 
     if type(slice_idx)==int:
         global fig #Calling the global variable fig
 
     elif slice_idx == None: 
-        '47.0, -125.0, 25.0, -102.0'
+        #'47.0, -125.0, 25.0, -102.0'
+
         length = 8*round(abs((float(coords[3]) - float(coords[1])))/abs(float(coords[0]) - float(coords[2]))*5)/5
         fig=plt.figure(figsize=(length+2,8))
-        for h in list(dataset.coords):
-            if h.lower() in ['pressure', 'isobaricinhpa'] or  h.lower() in 'pressure':
-                temp = dataset.rename({h:"pressure"})
-                temp = temp.sel(lat = slice(max(coords[0], coords[2]), min(coords[0], coords[2])),
-                        lon = slice(min(coords[1], coords[3]), max(coords[1], coords[3])))
-            else: 
-                continue
+        # for h in list(dataset.coords):
+        #     if h.lower() in ['pressure', 'isobaricinhpa'] or  h.lower() in 'pressure':
+        #         temp = dataset.rename({h:"pressure"})
+        temp = temp.sel(lat = slice(max(coords[0], coords[2]), min(coords[0], coords[2])),
+                lon = slice(min(coords[1], coords[3]), max(coords[1], coords[3])))
+        #     else: 
+        #         continue
         #Making animation
         ani = animation.FuncAnimation(fig, partial(scanner_p, dataset=temp, coords = coords, TtoB = TtoB, plotfile=plotfile), 
                                         repeat=False, frames=len(temp.pressure)-1, interval=200)
@@ -856,14 +893,6 @@ def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
         ds = dataset.sel(pressure = dataset.pressure.values[slice_idx])
     else:
         ds = dataset.sel(pressure = dataset.pressure.values[len(dataset.pressure)-slice_idx-1])
-    #Parameter extraction:
-    for j in list(ds.coords):
-        if j.lower() in 'latitudes':
-            y=dataset[j]
-        elif j.lower() in 'longitudes':
-            x=dataset[j]
-        else: 
-            continue
     
     ax = fig.add_subplot(111, projection = ccrs.PlateCarree())
     mapinfo = Coordinfo(x = x, y = y, dataset = ds, plotfile=plotfile)
@@ -890,3 +919,77 @@ def scanner_p(slice_idx, dataset, coords, TtoB = True, plotfile="default"):
     #Final arrange ment of position, explains why not simply adding the string for the stitle. 
     ax.set_title(f"Pressure level: {int(ds.pressure)} hPa", loc='Left')
     return ax
+
+def timeLapse(slice_idx, dataset, timerange = None, plotfile='default'):
+    
+    r'''
+    Parameters
+    ----------
+    dataset: 'xarray.Dataset' 
+        The dataset imported before.
+
+    timerange: None or 'list'
+        The time range for time lapse. None input will generate a preview plot 
+        (first time in the input dataset), and then time range is asked.
+
+    plotfile: 'dict' or 'str: ("default" only)'
+        A dictionary of plotting parameters that explained in README!
+        If input is default, the default setting dictionary will be used
+        
+    Returns
+    A video, a plot, or a matplotlib.pyplot.axes object.
+    -------
+    
+    '''
+
+
+    #Parameter extraction:
+    for i in list(dataset.coords):
+        if i.lower() in 'latitudes':
+            y=dataset[i].values
+        elif i.lower() in 'longitudes':
+            x=dataset[i].values
+        elif i.lower() in ['pressure', 'isobaricinhpa'] or  i.lower() in 'pressure':
+            if i!= 'pressure':
+                dataset = dataset.rename({i: 'pressure'})
+            z=dataset[i]
+        else: 
+            continue
+        
+    if not isinstance(timerange, (xr.DataArray, np.ndarray, list, set, tuple)):
+        try:
+            timerange = dataset.time
+        except:
+            raise KeyError("Please name you time dimension as 'time'!") 
+        
+     #Clear previous plot (Especially valuable when plotting for frame)
+    plt.clf()
+    
+    if type(slice_idx)==int:
+        print('here')
+        global fig #Calling the global variable fig
+        ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
+
+    elif slice_idx == None: 
+        length = 8*round(abs(float(x[-1]) - float(x[0]))/abs(float(y[-1]) - float(y[0]))*5)/5
+        fig, ax = plt.subplots(1,1, figsize=(length+2,8), subplot_kw={'projection':ccrs.PlateCarree()})
+        ani = animation.FuncAnimation(fig, partial(timeLapse, dataset=dataset, timerange = timerange, plotfile=plotfile), 
+                                        repeat=False, frames=len(timerange), interval=200)
+        video = ani.to_html5_video() 
+        html = display.HTML(video)
+        plt.close()
+        return  display.display(html)
+            
+    #Raise error of putting something weird.
+    else:
+        raise ValueError('Set slice_idx as a number for returning plot, None and also settingtrue for printing the tracking plot plot=False for return video')
+    
+   
+    
+    if plotfile == 'default':
+        plotfile = default()
+
+    dataset = dataset.isel(time = slice_idx) 
+    ax = baseplot(dataset, plotfile=plotfile, fig = fig)
+        
+    return ax 
