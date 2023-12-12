@@ -22,16 +22,16 @@ def default():
     default={'contour':{
                     'thta':{'level': np.arange(250, 450, 3),
                             'color':'red',
-                            'linewidths':1,
+                            'linewidth':1,
                             'title':"Potential temperature (K)",
                             'linestyle': 'dashed'},
                         'z':{'level': np.arange(0, 150000, 60),
                             'color':'black',
-                            'linewidths':1, 
+                            'linewidth':1, 
                             'title': "Geopotential height (m)"},
                         't':{'level': np.arange(0, 400, 3),
                             'color':'black',
-                            'linewidths':1, 
+                            'linewidth':1, 
                             'title': "Temperature (K)"}},
                 'fill':{
                     'vo':{'level': np.arange(5e-5,40e-5,5e-5),
@@ -123,7 +123,7 @@ def core(self, ax, colorbar = True):
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, dataset[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidth=renders['linewidth'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
@@ -215,9 +215,9 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
         Pairs of lat, lon values in a list.
         This is the initial point!!!
     width: 
-        Width of the cross section, default is 5 degrees.
+        Width of the cross section, default is 7 degrees.
     slices:
-        Number of cross sections you want to take between the start and the end.
+        Number of cross sections you want to take between the start and the end, default is 25 slices.
     plotfile: 'dict' or 'str: ("default" only)'
         A dictionary of plotting parameters that explained in README!
         If input is default, the default setting dictionary will be used
@@ -236,10 +236,25 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
         lons = []
         for i in range(len(locations)//2):
             if type(locations[2*i])in [int, float]  and type(locations[2*i+1])in [int, float] :
-                ax.scatter(marker='.', x=locations[2*i+1], y=locations[2*i], transform=ccrs.PlateCarree(), s=500, c='Teal', edgecolors ='w', zorder=5)
-                lats.append(locations[2*i])
-                lons.append(locations[2*i+1])
-        
+                if i == 0:
+                    ax.scatter(marker='.', x=locations[2*i+1], y=locations[2*i], transform=ccrs.PlateCarree(), s=500, c='red', edgecolors ='w', zorder=5)
+                    lats.append(locations[2*i])
+                    lons.append(locations[2*i+1])
+                elif i == len(locations)//2-1:
+                    ax.scatter(marker='.', x=locations[2*i+1], y=locations[2*i], transform=ccrs.PlateCarree(), s=500, c='Teal', edgecolors ='w', zorder=5)
+                    lats.append(locations[2*i])
+                    lons.append(locations[2*i+1])
+                else:
+                    ax.scatter(marker='.', x=locations[2*i+1], y=locations[2*i], transform=ccrs.PlateCarree(), s=500, c='orange', edgecolors ='w', zorder=5)
+                    lats.append(locations[2*i])
+                    lons.append(locations[2*i+1])
+            # if type(pos1[0])in [int, float] and type(pos1[1])in [int, float] :
+            #     ax.scatter(marker='.', x=pos1[1], y=pos1[0], transform=ccrs.PlateCarree(), s=500, c='Red', edgecolors ='w',zorder=5)
+            # if type(pos2[0])in [int, float]  and type(pos2[1])in [int, float] :
+            #     ax.scatter(marker='.', x=pos2[1], y=pos2[0], transform=ccrs.PlateCarree(), s=500, c='Orange', edgecolors ='w',zorder=5)
+            # if type(pos3[0])in [int, float]  and type(pos3[1])in [int, float] :
+            #     ax.scatter(marker='.', x=pos3[1], y=pos3[0], transform=ccrs.PlateCarree(), s=500, c='Teal', edgecolors ='w', zorder=5)
+                
         lons = np.array(lons)
         lats = np.array(lats)
         if len(lats) == 2:
@@ -270,6 +285,8 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
             Xout.append([X_[i+1] - width*np.sin(ang), X_[i+1] + width*np.sin(ang)]) #sin(90deg - x) = cos(x)
             Yout.append([Y_[i+1] + width*np.cos(ang), Y_[i+1] - width*np.cos(ang)])
             ax.plot(Xout[i], Yout[i], lw = 1, color ='k', transform=ccrs.PlateCarree())
+            ax.scatter(marker='.', x=Xout[i][0], y=Yout[i][0], transform=ccrs.PlateCarree(), s=250, c='k', edgecolors ='w', zorder=5)
+            ax.scatter(marker='.', x=Xout[i][1], y=Yout[i][1], transform=ccrs.PlateCarree(), s=250, c='k', edgecolors ='w', zorder=5)
 
         plt.plot(X_, Y_, transform=ccrs.PlateCarree())
         
@@ -507,7 +524,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, cross[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidth = renders['linewidth'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
@@ -729,7 +746,7 @@ def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default"
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, cross[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidth=renders['linewidth'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
