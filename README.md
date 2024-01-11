@@ -84,7 +84,7 @@ Then, run scanner() to generate a video, which plays the cross sections from the
 
 A selection function(selection()) is also defined for extracting the desired dataset.
 
-Other functions are defined for visualizing ERA5 data in other ways, such as plotting a timelapse on an isosurface, or plotting the atmosphere through pressure levels.
+Other functions are defined for visualizing ERA5 data in other ways, such as plotting a timelapse on an isosurface, or plotting the atmosphere through atmospheric levels.
 
 One important component of the notebook is a dictionary called <b>plotfile</b> that includes parameters for plotting inside of the estimation() and the scanner() function.
 Here is the plotfile used in the notebook (For new parameters, level, (color&linewidth)/cmap, and title are required, and the rest are optional.):
