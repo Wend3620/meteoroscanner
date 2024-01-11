@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name = "Scanner",
-    version = "0.0.3",
+    version = "0.0.9",
     author = "Wenyuan Du",
     packages=['Scanner'],
-    install_requires=['datetime','metpy','cartopy', 'matplotlib', 'xarray', 'numpy'])
+    install_requires=['metpy','cartopy', 'matplotlib', 'xarray', 'numpy', 'scipy'])
