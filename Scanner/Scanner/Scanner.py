@@ -22,16 +22,16 @@ def default():
     default={'contour':{
                     'thta':{'level': np.arange(250, 450, 3),
                             'color':'red',
-                            'linewidth':1,
+                            'linewidths':1,
                             'title':"Potential temperature (K)",
                             'linestyle': 'dashed'},
                         'z':{'level': np.arange(0, 150000, 60),
                             'color':'black',
-                            'linewidth':1, 
+                            'linewidths':1, 
                             'title': "Geopotential height (m)"},
                         't':{'level': np.arange(0, 400, 3),
                             'color':'black',
-                            'linewidth':1, 
+                            'linewidths':1, 
                             'title': "Temperature (K)"}},
                 'fill':{
                     'vo':{'level': np.arange(5e-5,40e-5,5e-5),
@@ -99,8 +99,8 @@ def core(self, ax, colorbar = True):
         ax.add_feature(cfeature.LAND, facecolor='0.8')
         countries=cfeature.NaturalEarthFeature(category="cultural", scale="110m", 
                                             facecolor="none", name="admin_0_boundary_lines_land")
-        ax.add_feature(countries, linewidth=2, edgecolor="black")
-        ax.add_feature(cfeature.STATES.with_scale('50m'), linewidth=0.5)
+        ax.add_feature(countries, linewidths=2, edgecolor="black")
+        ax.add_feature(cfeature.STATES.with_scale('50m'), linewidths=0.5)
         ax.coastlines(color='k')
         
         title=' ' #Making initial space to the title, 
@@ -123,7 +123,7 @@ def core(self, ax, colorbar = True):
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, dataset[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidth=renders['linewidth'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
@@ -187,7 +187,7 @@ def baseplot(dataset,plotfile = 'default', info = False, fig = None):
     #Adding the suptitle, since every variable bring a comma when attached to the title string. slice out the last comma and add a space here.
     plt.suptitle(title[:-2]+' ', fontsize=14)
     #Adding the time, this is in datetime format!!!
-    graph.set_title(f"Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
+    graph.set_title("Valid time:"+ str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values), loc='right')
     #Adding the level
     graph.set_title(z.attrs['long_name'].capitalize()+' level: '
               +str(int(dataset.pressure.values))+z.attrs['units'], loc='left')
@@ -204,7 +204,7 @@ def baseplot(dataset,plotfile = 'default', info = False, fig = None):
         return graph, mapinfo
     return graph
 
-def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='default'):
+def estimation(dataset, locations = [], width = 7, steps = 25, plotfile='default'):
     
     r'''
     Parameters
@@ -216,8 +216,8 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
         This is the initial point!!!
     width: 
         Width of the cross section, default is 7 degrees.
-    slices:
-        Number of cross sections you want to take between the start and the end, default is 25 slices.
+    steps:
+        Number of cross sections you want to take between the start and the end, default is 25 steps.
     plotfile: 'dict' or 'str: ("default" only)'
         A dictionary of plotting parameters that explained in README!
         If input is default, the default setting dictionary will be used
@@ -259,13 +259,13 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
         lats = np.array(lats)
         if len(lats) == 2:
             X_Y_Spline = interp1d(lats, lons, kind='linear')
-            X_ = np.linspace(lons.min(), lons.max(), slices)
+            X_ = np.linspace(lons.min(), lons.max(), steps)
             Y_ = X_Y_Spline(X_)
 
         else:
             if (lons[0] != min(lons) and lons[0] != max(lons)) or (lons[-1] != min(lons) and lons[-1] != max(lons)):
                 X_Y_Spline = interp1d(lats, lons, kind='quadratic')
-                X_ = np.linspace(lats.min(), lats.max(), slices)
+                X_ = np.linspace(lats.min(), lats.max(), steps)
                 Y_ = X_Y_Spline(X_)
                 dum = X_
                 X_ = Y_
@@ -273,11 +273,12 @@ def estimation(dataset, locations = [], width = 7, slices = 25, plotfile='defaul
 
             else:
                 X_Y_Spline = interp1d(lons, lats, kind='quadratic')
-                X_ = np.linspace(lons.min(), lons.max(), slices)
+                X_ = np.linspace(lons.min(), lons.max(), steps)
                 Y_ = X_Y_Spline(X_)
 
         Xout = []
         Yout = []
+        width = width/2
         for i in range(len(X_) - 2):
             dx = X_[i+2] - X_[i]
             dy = Y_[i+2] - Y_[i]
@@ -387,14 +388,14 @@ def estimation_3pts(dataset, pos1=[None, None], pos2=[None, None], pos3=[None, N
 
         #Deviding the typed location into paird for function to recognize 
         print("Current: (lat/lon1, lat/lon2, lat/lon3)"+str(tuple(coord)))
-        return estimation(dataset=dataset, pos1=coord[:2], pos2=coord[2:4], pos3=coord[4:6], plotfile=plotfile)
+        return estimation_3pts(dataset=dataset, pos1=coord[:2], pos2=coord[2:4], pos3=coord[4:6], plotfile=plotfile)
 
 def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plot=True, prec = None):
     r'''
     Parameters
     ------
     slice_idx: 'int' or 'None'
-        The index for the cross section slices. Make video when slice = None
+        The index for the cross section steps. Make video when slice = None
     
     dataset: 'xarray.Dataset'
         The dataset you use for final scanner.
@@ -524,7 +525,7 @@ def scanner(slice_idx, dataset, coords, steps='default', plotfile="default", plo
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, cross[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidth = renders['linewidth'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidths = renders['linewidths'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
@@ -608,7 +609,7 @@ def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default"
     Parameters
     ------
     slice_idx: 'int' or 'None'
-        The index for the cross section slices. Make video when slice = None
+        The index for the cross section steps. Make video when slice = None
     
     dataset: 'xarray.Dataset'
         The dataset you use for final scanner.
@@ -674,7 +675,7 @@ def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default"
         #print(coords)
         fig=plt.figure(figsize=(12,8))
         #Making animation
-        ani = animation.FuncAnimation(fig, partial(scanner, dataset=dataset, coords=coords, steps=steps, plotfile=plotfile, plot=False, prec=prec), 
+        ani = animation.FuncAnimation(fig, partial(scanner_rect, dataset=dataset, coords=coords, steps=steps, plotfile=plotfile, plot=False, prec=prec), 
                                       repeat=False, frames=len(coords[0])-1, interval=200)
         video = ani.to_html5_video() 
         html = display.HTML(video)
@@ -718,6 +719,7 @@ def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default"
         sign_X = (lonA - lonB)/abs(lonA - lonB)
         slope = np.arctan(abs((latA - latB)/(lonA - lonB)))
         bx.plot([lonB, lonA],  [latB, latA], lw=2, color='k')
+
         print(f"Currently slicing: ({latA}, {lonA}), ({latB}, {lonB})")
         bx.annotate("A", (lonA -0.75 + 1*np.cos(slope)*sign_X, latA -0.25+ 1.5*np.sin(slope)*sign_Y),  #X, Y
                     color='k', weight = 'bold', fontsize = 14) 
@@ -746,7 +748,7 @@ def scanner_rect(slice_idx, dataset, coords, steps='default', plotfile="default"
                 lstyle = renders['linestyle'] if 'linestyle' in renders else 'solid'
                 etd = renders['extend'] if 'extend' in renders else 'neither'
                 graph=ax.contour(x, y, cross[i]*fix,    
-                            levels=renders['level']*fix, colors=renders['color'], linewidth=renders['linewidth'], 
+                            levels=renders['level']*fix, colors=renders['color'], linewidths=renders['linewidths'], 
                             linestyles = lstyle, extend = etd)
                 #Adding label on the contour
                 graph.clabel(graph.levels[1::2], fontsize=8, colors=renders['color'], inline=1,
@@ -830,7 +832,7 @@ def scanner_p(slice_idx, dataset, coords = "all", TtoB = True, plotfile="default
     Parameters
     ------
     slice_idx: 'int' or 'None'
-        The index for the dataset section slices. Make video when slice = None
+        The index for the dataset section steps. Make video when slice = None
     
     dataset: 'xarray.Dataset'
         The dataset you use for final scanner.
@@ -890,7 +892,7 @@ def scanner_p(slice_idx, dataset, coords = "all", TtoB = True, plotfile="default
         # for h in list(dataset.coords):
         #     if h.lower() in ['pressure', 'isobaricinhpa'] or  h.lower() in 'pressure':
         #         temp = dataset.rename({h:"pressure"})
-        temp = temp.sel(lat = slice(max(coords[0], coords[2]), min(coords[0], coords[2])),
+        temp = dataset.sel(lat = slice(max(coords[0], coords[2]), min(coords[0], coords[2])),
                 lon = slice(min(coords[1], coords[3]), max(coords[1], coords[3])))
         #     else: 
         #         continue
@@ -982,11 +984,10 @@ def timeLapse(slice_idx, dataset, timerange = None, plotfile='default'):
      #Clear previous plot (Especially valuable when plotting for frame)
     plt.clf()
     
-    if type(slice_idx)==int:
-        print('here')
+    if isinstance(slice_idx, int):
         global fig #Calling the global variable fig
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
-
+        print("Processing time: " + str(dataset["time"].dt.strftime("%Y-%m-%d %H:%MZ").values))
     elif slice_idx == None: 
         length = 8*round(abs(float(x[-1]) - float(x[0]))/abs(float(y[-1]) - float(y[0]))*5)/5
         fig, ax = plt.subplots(1,1, figsize=(length+2,8), subplot_kw={'projection':ccrs.PlateCarree()})
@@ -1000,8 +1001,6 @@ def timeLapse(slice_idx, dataset, timerange = None, plotfile='default'):
     #Raise error of putting something weird.
     else:
         raise ValueError('Set slice_idx as a number for returning plot, None and also settingtrue for printing the tracking plot plot=False for return video')
-    
-   
     
     if plotfile == 'default':
         plotfile = default()
