@@ -13,6 +13,13 @@
 
 ---
 
+#### Version 0.1.0
+
+- Updated the tutorial.
+- Minor improvements. 
+
+---
+
 #### Version 0.0.9 (Timelapse)
 
 - A new method for plotting timelapse on an isosurface. 
