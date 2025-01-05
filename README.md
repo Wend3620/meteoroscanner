@@ -1,4 +1,4 @@
-# <b><font size=18>Visual</font></b>
+# <b><font size=18>Scanner</font></b>
 ### Updated description coming soon!
 
 #### Installation:
