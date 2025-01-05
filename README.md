@@ -1,6 +1,13 @@
 # <b><font size=18>Visual</font></b>
 ### Updated description coming soon!
 
+#### Installation:
+[PyPI - Version](https://img.shields.io/pypi/v/meteoroscanner?color=grass)
+```bash
+pip install meteoroscanner
+```
+---
+
 #### Todo List:
 - [x] Make the y-axis in logarithmic scale.
 - [x] Show the location of the cross-section
