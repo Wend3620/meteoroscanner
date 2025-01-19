@@ -1,6 +1,6 @@
+metpy
 cartopy
 matplotlib
-metpy
+xarray
 numpy
 scipy
-xarray

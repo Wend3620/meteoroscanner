@@ -2,10 +2,10 @@ from setuptools import setup
 
 
 
-setup(name = "meteoroscanner",
-    version = "0.1.0",
+setup(name = "meteoscanner",
+    version = "0.1.1",
     author = "Wend3620",
-    packages=['meteoroscanner'],
+    packages=['meteoscanner'],
     license_files = 'LICENSE.txt',
     license='GPLv3',
     install_requires=['metpy','cartopy', 'matplotlib', 'xarray', 'numpy', 'scipy'],
@@ -14,8 +14,7 @@ setup(name = "meteoroscanner",
                 A person working with general circulation may find this package being helpful.
                 This package will also be used in other public personal projects""",
     classifiers=['License :: OSI Approved :: GNU General Public License v3 (GPLv3)', 
-                 'Topic :: General Circulation',
-                 'Topic :: Meteorology',
                  'Intended Audience :: Science/Research'
                  ],
+    long_description_content_type ='text/markdown',
     python_requires = ">=3.10")

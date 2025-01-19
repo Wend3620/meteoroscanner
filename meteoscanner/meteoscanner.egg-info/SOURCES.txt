@@ -1,0 +1,10 @@
+setup.py
+meteoscanner/Coordinfo.py
+meteoscanner/__init__.py
+meteoscanner/colorbar.py
+meteoscanner/meteoscanner.py
+meteoscanner.egg-info/PKG-INFO
+meteoscanner.egg-info/SOURCES.txt
+meteoscanner.egg-info/dependency_links.txt
+meteoscanner.egg-info/requires.txt
+meteoscanner.egg-info/top_level.txt

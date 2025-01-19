@@ -1,0 +1,28 @@
+Metadata-Version: 2.2
+Name: meteoscanner
+Version: 0.1.1
+Summary: A module used for making continuous cross-section view of the atmosphere.
+Author: Wend3620
+License: GPLv3
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Intended Audience :: Science/Research
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: metpy
+Requires-Dist: cartopy
+Requires-Dist: matplotlib
+Requires-Dist: xarray
+Requires-Dist: numpy
+Requires-Dist: scipy
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: license
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+A module used for making continuous cross-section view of the atmosphere. 
+                A person working with general circulation may find this package being helpful.
+                This package will also be used in other public personal projects

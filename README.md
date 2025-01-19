@@ -2,9 +2,9 @@
 ### Updated description coming soon!
 
 #### Installation:
-[![PyPI - Version](https://img.shields.io/pypi/v/meteoroscanner?color=grass)](https://pypi.org/project/meteoroscanner/)
+[![PyPI - Version](https://img.shields.io/pypi/v/meteoscanner?color=grass)](https://pypi.org/project/meteoscanner/)
 ```bash
-pip install meteoroscanner
+pip install meteoscanner
 ```
 ---
 
